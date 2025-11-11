@@ -1,0 +1,118 @@
+/* Reset and Base Styles */
+body {
+    margin: 0;
+    padding: 0;
+}
+
+/* Range Input Styling */
+input[type="range"] {
+    accent-color: #a855f7;
+}
+
+/* Custom Scrollbar Styles */
+.scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(168, 85, 247, 0.5);
+    border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(168, 85, 247, 0.7);
+}
+
+/* Smooth transitions for all interactive elements */
+button, input {
+    transition: all 0.3s ease;
+}
+
+/* Fix for video element */
+video {
+    display: block;
+    max-width: 100%;
+}
+
+/* Loading animation enhancement */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Focus states for accessibility */
+input:focus,
+button:focus {
+    outline: 2px solid rgba(168, 85, 247, 0.5);
+    outline-offset: 2px;
+}
+
+/* Disabled state styling */
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Image loading state */
+img {
+    background: rgba(168, 85, 247, 0.1);
+}
+
+/* Channel button hover effect enhancement */
+.channel-button {
+    transform: translateX(0);
+}
+
+.channel-button:hover {
+    transform: translateX(4px);
+}
+
+/* Video player overlay transitions */
+.video-overlay {
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* Responsive text sizing */
+@media (max-width: 640px) {
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    .text-lg {
+        font-size: 1rem;
+    }
+}
+
+/* Prevent text selection on control buttons */
+button {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Better focus for keyboard navigation */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+    outline: 2px solid #a855f7;
+    outline-offset: 2px;
+}
+
+/* Smooth scroll for channel list */
+.scrollbar-thin {
+    scroll-behavior: smooth;
+}
