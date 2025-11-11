@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV1 Video Player</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(30, 27, 75, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            color: #a855f7;
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .video-wrapper {
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+        }
+
+        button {
+            background: #a855f7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        button:hover:not(:disabled) {
+            background: #9333ea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            max-width: 150px;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .status {
+            color: #a855f7;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 12px;
+            background: rgba(168, 85, 247, 0.1);
+            border-radius: 6px;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #a855f7;
+            border-radius: 50%;
+        }
+
+        .error-message {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            display: none;
+            text-align: center;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        @media (max-width: 640px) {
+            .controls {
+                flex-wrap: wrap;
+            }
+
+            .volume-control {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 TV1</h1>
+        
+        <div class="video-wrapper">
+            <video id="videoPlayer" controls playsinline></video>
+            <div class="loading" id="loading">
+                <div class="spinner animate-spin"></div>
+                <span>Loading stream...</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="playPauseBtn">Play</button>
+            <button id="reloadBtn">Reload Stream</button>
+            <div class="volume-control">
+                <span style="color: white; font-size: 14px;">🔊</span>
+                <input type="range" id="volumeControl" min="0" max="100" value="80">
+            </div>
+            <div class="status" id="status">Ready</div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+    </div>
+
+    <script>
+        const video = document.getElementById('videoPlayer');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const reloadBtn = document.getElementById('reloadBtn');
+        const volumeControl = document.getElementById('volumeControl');
+        const statusEl = document.getElementById('status');
+        const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('errorMessage');
+        
+        const streamUrl = 'https://tv.aizahir.com/channels/TV1/index.m3u8';
+        let hls;
+
+        function showLoading(show) {
+            if (show) {
+                loadingEl.classList.add('active');
+            } else {
+                loadingEl.classList.remove('active');
+            }
+        }
+
+        function showError(message) {
+            errorEl.textContent = message;
+            errorEl.classList.add('active');
+            setTimeout(() => {
+                errorEl.classList.remove('active');
+            }, 5000);
+        }
+
+        function updateStatus(message) {
+            statusEl.textContent = message;
+        }
+
+        function initializePlayer() {
+            showLoading(true);
+            updateStatus('Loading...');
+            errorEl.classList.remove('active');
+
+            if (Hls.isSupported()) {
+                if (hls) {
+                    hls.destroy();
+                }
+
+                hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 90
+                });
+
+                hls.loadSource(streamUrl);
+                hls.attachMedia(video);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    showLoading(false);
+                    updateStatus('Stream Ready');
+                    video.play().catch(e => {
+                        console.log('Autoplay prevented:', e);
+                        updateStatus('Click Play');
+                    });
+                });
+
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        showLoading(false);
+                        switch(data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                showError('Network error - trying to recover...');
+                                updateStatus('Network Error');
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                showError('Media error - trying to recover...');
+                                updateStatus('Media Error');
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                showError('Fatal error - please reload');
+                                updateStatus('Error');
+                                hls.destroy();
+                                break;
+                        }
+                    }
+                });
+
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = streamUrl;
+                video.addEventListener('loadedmetadata', () => {
+                    showLoading(false);
+                    updateStatus('Stream Ready');
+                    video.play().catch(e => {
+                        console.log('Autoplay prevented:', e);
+                        updateStatus('Click Play');
+                    });
+                });
+            } else {
+                showLoading(false);
+                showError('HLS is not supported in this browser');
+                updateStatus('Not Supported');
+            }
+        }
+
+        // Play/Pause button
+        playPauseBtn.addEventListener('click', () => {
+            if (video.paused) {
+                video.play();
+            } else {
+                video.pause();
+            }
+        });
+
+        // Update play/pause button text
+        video.addEventListener('play', () => {
+            playPauseBtn.textContent = 'Pause';
+            updateStatus('Playing');
+        });
+
+        video.addEventListener('pause', () => {
+            playPauseBtn.textContent = 'Play';
+            updateStatus('Paused');
+        });
+
+        // Reload button
+        reloadBtn.addEventListener('click', () => {
+            initializePlayer();
+        });
+
+        // Volume control
+        volumeControl.addEventListener('input', (e) => {
+            video.volume = e.target.value / 100;
+        });
+
+        // Set initial volume
+        video.volume = 0.8;
+
+        // Initialize player on load
+        initializePlayer();
+    </script>
+</body>
+</html>
