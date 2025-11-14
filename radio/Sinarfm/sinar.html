@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radio Web Player</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(30, 27, 75, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            color: #a855f7;
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+
+        .thelist {
+            color: #e0dde2;
+            text-align: left;
+            margin-bottom: 30px;
+            font-size: 14px;
+            
+        }
+
+        .subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+
+        .radio-display {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(147, 51, 234, 0.2));
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 24px;
+            border: 2px solid rgba(168, 85, 247, 0.3);
+        }
+
+        .radio-icon {
+            font-size: 80px;
+            margin-bottom: 16px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+        }
+
+        .station-name {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .now-playing {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #a855f7;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(168, 85, 247, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:hover {
+            border-color: rgba(168, 85, 247, 0.5);
+        }
+
+        input[type="text"]::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        button {
+            background: #a855f7;
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            flex: 1;
+        }
+
+        button:hover:not(:disabled) {
+            background: #9333ea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: rgba(168, 85, 247, 0.2);
+            border: 2px solid rgba(168, 85, 247, 0.5);
+        }
+
+        button.secondary:hover:not(:disabled) {
+            background: rgba(168, 85, 247, 0.3);
+            border-color: #a855f7;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .volume-icon {
+            font-size: 20px;
+            min-width: 24px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .volume-value {
+            color: #a855f7;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: right;
+            font-size: 14px;
+        }
+
+        .status {
+            text-align: center;
+            color: #a855f7;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 12px;
+            background: rgba(168, 85, 247, 0.1);
+            border-radius: 8px;
+        }
+
+        .loading-spinner {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            color: white;
+            margin: 20px 0;
+        }
+
+        .loading-spinner.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #a855f7;
+            border-radius: 50%;
+        }
+
+        .error-message {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            display: none;
+            text-align: center;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        .visualizer {
+            display: flex;
+            gap: 3px;
+            justify-content: center;
+            align-items: flex-end;
+            height: 40px;
+            margin-top: 16px;
+        }
+
+        .bar {
+            width: 4px;
+            background: #a855f7;
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .radio-icon {
+                font-size: 60px;
+            }
+
+            .station-name {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📻 Radio Player</h1>
+        <div class="subtitle">Stream your favorite radio stations</div>
+        
+        <div class="radio-display">
+            <div class="radio-icon" id="radioIcon">📻</div>
+            <div class="station-name" id="stationName">Ready to Play</div>
+            <div class="now-playing" id="nowPlaying">Click Load Stream to start</div>
+            <div class="visualizer" id="visualizer">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+            </div>
+        </div>
+
+        <div class="thelist">
+            <li>Click button Play to start listening </li>
+            <li>Button Pause to pause the radio</li>
+            <li>If the audio stuck click stop and reload the stream again</li>
+        </div>
+
+        <div class="controls">
+            <div class="button-group">
+                <button id="loadBtn">Load Stream</button>
+                <button id="playPauseBtn" disabled>Play</button>
+            </div>
+            <button id="stopBtn" class="secondary" disabled>Stop</button>
+        </div>
+
+        <div class="volume-control">
+            <span class="volume-icon">🔊</span>
+            <input type="range" id="volumeControl" min="0" max="100" value="70">
+            <span class="volume-value" id="volumeValue">70%</span>
+        </div>
+
+        <div class="loading-spinner" id="loading">
+            <div class="spinner animate-spin"></div>
+            <span>Loading stream...</span>
+        </div>
+
+        <div class="status" id="status">Ready</div>
+        <div class="error-message" id="errorMessage"></div>
+
+        <audio id="audioPlayer"></audio>
+    </div>
+
+    <script>
+        const audio = document.getElementById('audioPlayer');
+        const loadBtn = document.getElementById('loadBtn');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const volumeControl = document.getElementById('volumeControl');
+        const volumeValue = document.getElementById('volumeValue');
+        const statusEl = document.getElementById('status');
+        const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('errorMessage');
+        const radioIcon = document.getElementById('radioIcon');
+        const stationName = document.getElementById('stationName');
+        const nowPlaying = document.getElementById('nowPlaying');
+        const visualizer = document.getElementById('visualizer');
+        const streamUrl = 'https://tv.aizahir.com/radio/Sinarfm/index.m3u8';
+        const streamUrlInput = 'https://tv.aizahir.com/radio/Sinarfm/index.m3u8';
+        
+        let hls;
+        let isPlaying = false;
+        let visualizerInterval;
+
+        function showLoading(show) {
+            if (show) {
+                loadingEl.classList.add('active');
+            } else {
+                loadingEl.classList.remove('active');
+            }
+        }
+
+        function showError(message) {
+            errorEl.textContent = message;
+            errorEl.classList.add('active');
+            setTimeout(() => {
+                errorEl.classList.remove('active');
+            }, 5000);
+        }
+
+        function updateStatus(message) {
+            statusEl.textContent = message;
+        }
+
+        function updateDisplay(name, playing) {
+            stationName.textContent = name;
+            nowPlaying.textContent = playing;
+            radioIcon.textContent = isPlaying ? '🎵' : '📻';
+        }
+
+        function animateVisualizer() {
+            if (isPlaying) {
+                const bars = visualizer.querySelectorAll('.bar');
+                bars.forEach(bar => {
+                    const height = Math.random() * 30 + 10;
+                    bar.style.height = height + 'px';
+                });
+            } else {
+                const bars = visualizer.querySelectorAll('.bar');
+                bars.forEach(bar => {
+                    bar.style.height = '5px';
+                });
+            }
+        }
+
+        function startVisualizer() {
+            visualizerInterval = setInterval(animateVisualizer, 150);
+        }
+
+        function stopVisualizer() {
+            if (visualizerInterval) {
+                clearInterval(visualizerInterval);
+                animateVisualizer();
+            }
+        }
+
+        function loadStream() {
+            const url = streamUrl;
+            
+            if (!url) {
+                showError('Please enter a stream URL');
+                return;
+            }
+
+            showLoading(true);
+            updateStatus('Loading...');
+            errorEl.classList.remove('active');
+
+            if (hls) {
+                hls.destroy();
+            }
+
+            if (Hls.isSupported()) {
+                hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 90
+                });
+
+                hls.loadSource(url);
+                hls.attachMedia(audio);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    showLoading(false);
+                    updateStatus('Stream Loaded');
+                    playPauseBtn.disabled = false;
+                    stopBtn.disabled = false;
+                    
+                    const stationUrl = new URL(url);
+                    updateDisplay('Radio Station', stationUrl.hostname);
+                });
+
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        showLoading(false);
+                        switch(data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                showError('Network error - check the URL or try again');
+                                updateStatus('Network Error');
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                showError('Media error - invalid stream format');
+                                updateStatus('Media Error');
+                                break;
+                            default:
+                                showError('Failed to load stream');
+                                updateStatus('Error');
+                                break;
+                        }
+                    }
+                });
+
+            } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+                audio.src = url;
+                audio.addEventListener('loadedmetadata', () => {
+                    showLoading(false);
+                    updateStatus('Stream Loaded');
+                    playPauseBtn.disabled = false;
+                    stopBtn.disabled = false;
+                    
+                    const stationUrl = new URL(url);
+                    updateDisplay('Radio Station', stationUrl.hostname);
+                }, { once: true });
+            } else {
+                showLoading(false);
+                showError('HLS is not supported in this browser');
+                updateStatus('Not Supported');
+            }
+        }
+
+        // Load button
+        loadBtn.addEventListener('click', loadStream);
+
+        
+
+        // Play/Pause button
+        playPauseBtn.addEventListener('click', () => {
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+            }
+        });
+
+        // Stop button
+        stopBtn.addEventListener('click', () => {
+            audio.pause();
+            audio.currentTime = 0;
+            if (hls) {
+                hls.destroy();
+                hls = null;
+            }
+            playPauseBtn.disabled = true;
+            stopBtn.disabled = true;
+            isPlaying = false;
+            stopVisualizer();
+            updateStatus('Stopped');
+            updateDisplay('Ready to Play', 'Enter a stream URL to start');
+        });
+
+        // Audio events
+        audio.addEventListener('play', () => {
+            isPlaying = true;
+            playPauseBtn.textContent = 'Pause';
+            updateStatus('Playing');
+            startVisualizer();
+            updateDisplay('Now Playing', 'Sinar.fm - Live Stream');
+        });
+
+        audio.addEventListener('pause', () => {
+            isPlaying = false;
+            playPauseBtn.textContent = 'Play';
+            updateStatus('Paused');
+            stopVisualizer();
+        });
+
+        audio.addEventListener('waiting', () => {
+            updateStatus('Buffering...');
+        });
+
+        audio.addEventListener('canplay', () => {
+            if (isPlaying) {
+                updateStatus('Playing');
+            }
+        });
+
+        // Volume control
+        volumeControl.addEventListener('input', (e) => {
+            const value = e.target.value;
+            audio.volume = value / 100;
+            volumeValue.textContent = value + '%';
+        });
+
+        // Set initial volume
+        audio.volume = 0.7;
+
+        // Initialize visualizer
+        startVisualizer();
+    </script>
+</body>
+</html>
